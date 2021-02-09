@@ -1,9 +1,9 @@
   
 detectron2's structure
-# Configor
-detectron2 has a universial variable cfg, define any config you need for building a model/trainer
+# Configure
+detectron2 has a universial variable ```cfg```, define any config you need for building a model/trainer
 
-using ```cfg = get_cfg()``` to get a default configer. look at ```detectron2/config/deafults.py for more details.
+using ```cfg = get_cfg()``` to get a default configer. look at ```detectron2/config/deafults.py``` for more details.
 
 to add new config into ```cfg``` do as 
 ```
@@ -51,11 +51,15 @@ I guess this part is not useful for me. usually we can just using some exists. s
 
 ### backbone
 
-using cfg.MODEL.BACKBONE.NAME to assign a specific NN to the backbone, for example,
+using cfg.MODEL.BACKBONE.NAME to assign a specific NN to the backbone, and then call
 ```
-
+self.backbone = detectron2.modeling.build_backbone(cfg)
 ```
-
+if you create a backbone by yourself, don't forget to add
+```
+@BACKBONE_REGISTRY.register()
+```
+before your building_backbone function
 
 ## optimizer
 ## ...
