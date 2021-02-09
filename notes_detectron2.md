@@ -18,7 +18,7 @@ def build_model(cfg):
     return model
 ```
 
-it will use ```cfg.MODEL.META_ARCHITECTURE``` to find a registered model and created it.
+it will use ```cfg.MODEL.META_ARCHITECTURE``` to find a registered model and create it.
 
 To register a model using
 ```
@@ -26,6 +26,18 @@ To register a model using
 ```
 before your class
 
+usually, a model has 4 parts to do inference
+
+* self.preprocess_image
+* self.backbone
+* self.proposal_generator
+* self.head
+
+if we want to train a model, ```head``` and ```proposal_generator``` also need a loss as second output
+
+### preprocess_image
+
+I guess this part is not useful for me. usually we can just using some exists 
 
 
 ## optimizer
