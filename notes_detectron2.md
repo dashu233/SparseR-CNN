@@ -13,6 +13,8 @@ cfg.MODEL.YOUR_CONFIG_NAME.YOUR_CONFIG_ATTRIBUTE = "this is a config"
 
 if your class need cfg, using ```@configurable``` before your ```__init__(...)```, and def ```from_config(class,cfg,OTHER_INPUT)``` as a class method. the output of ```from_config``` is the dict of all para in ```__init__()```
 
+I have to say this way is a little bit complicate, so if you ensure your code is only use in dectectron2 framework, just add cfg in ```__init__(...,cfg,...)``` is better
+
 # Trainer
 extends from TrainBase. If I want to write my own model, TrainDefault is sometimes useful
 
@@ -63,17 +65,16 @@ if you create a backbone by yourself, don't forget to add
 ```
 before your building_backbone function
 
-### self.proposal_generator
+### proposal_generator
 
 usually it was a learnable NN, the input of this NN is the feature map & some image info & target boxes(ground truth)
 target boxes are used in training process
 
 the output of NN has 2 parts, proposal region & losses term, the losses term usually used in training process
 
-### self.head
+### head
 
-it is a NN
-
+same like proposal_generator, it's just a NN, so you can do whatever you want to do.
 
 ## optimizer
 ## ...
