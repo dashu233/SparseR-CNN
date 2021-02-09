@@ -1,5 +1,15 @@
   
 detectron2's structure
+# Configor
+detectron2 has a universial variable cfg, define any config you need for building a model/trainer
+
+using ```cfg = get_cfg()``` to get a default configer. look at ```detectron2/config/deafults.py for more details.
+
+to add new config into ```cfg``` do as 
+```
+cfg.MODEL.YOUR_CONFIG_NAME = CN()
+cfg.MODEL.YOUR_CONFIG_NAME.YOUR_CONFIG_ATTRIBUTE = "this is a config"
+``` 
 
 # Trainer
 extends from TrainBase. If I want to write my own model, TrainDefault is sometimes useful
@@ -37,7 +47,14 @@ if we want to train a model, ```head``` and ```proposal_generator``` also need a
 
 ### preprocess_image
 
-I guess this part is not useful for me. usually we can just using some exists 
+I guess this part is not useful for me. usually we can just using some exists. such as DefaultTrainer's ```preprocess_image```
+
+### backbone
+
+using cfg.MODEL.BACKBONE.NAME to assign a specific NN to the backbone, for example,
+```
+
+```
 
 
 ## optimizer
