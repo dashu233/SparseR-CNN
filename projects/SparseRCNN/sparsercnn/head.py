@@ -260,14 +260,14 @@ class DynamicConv(nn.Module):
     def __init__(self, cfg):
         super().__init__()
 
-        self.hidden_dim = cfg.MODEL.SparseRCNN.HIDDEN_DIM
-        self.dim_dynamic = cfg.MODEL.SparseRCNN.DIM_DYNAMIC
-        self.num_dynamic = cfg.MODEL.SparseRCNN.NUM_DYNAMIC
-        self.num_params = self.hidden_dim * self.dim_dynamic
+        self.hidden_dim = cfg.MODEL.SparseRCNN.HIDDEN_DIM #256
+        self.dim_dynamic = cfg.MODEL.SparseRCNN.DIM_DYNAMIC #64
+        self.num_dynamic = cfg.MODEL.SparseRCNN.NUM_DYNAMIC #2
+        self.num_params = self.hidden_dim * self.dim_dynamic # 256 * 64
         self.dynamic_layer = nn.Linear(self.hidden_dim, self.num_dynamic * self.num_params)
 
         self.norm1 = nn.LayerNorm(self.dim_dynamic)
-        self.norm2 = nn.LayerNorm(self.hidden_dim)
+        self.norm2 = nn.LayerNorm(self.hidden_dim) #
 
         self.activation = nn.ReLU(inplace=True)
 
@@ -281,8 +281,11 @@ class DynamicConv(nn.Module):
         pro_features: (1,  N * nr_boxes, self.d_model)
         roi_features: (49, N * nr_boxes, self.d_model)
         '''
+        # d_model = hidden_dim = 256
         features = roi_features.permute(1, 0, 2)
         parameters = self.dynamic_layer(pro_features).permute(1, 0, 2)
+         
+        # parameters: (1,N*nr_boxes,2 * num_params) = (1,N*nr_boxes,num_dynamic* self.hidden_dim * self.dim_dynamic)
 
         param1 = parameters[:, :, :self.num_params].view(-1, self.hidden_dim, self.dim_dynamic)
         param2 = parameters[:, :, self.num_params:].view(-1, self.dim_dynamic, self.hidden_dim)
@@ -294,6 +297,7 @@ class DynamicConv(nn.Module):
         features = torch.bmm(features, param2)
         features = self.norm2(features)
         features = self.activation(features)
+        
 
         features = features.flatten(1)
         features = self.out_layer(features)
