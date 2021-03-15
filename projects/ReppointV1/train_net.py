@@ -10,11 +10,8 @@ This script is a simplified version of the training script in detectron2/tools.
 """
 import argparse
 import sys
-import torch.nn as nn
-import logging
 import os
 import itertools
-import time
 from typing import Any, Dict, List, Set
 
 import torch
@@ -22,12 +19,14 @@ import torch
 import detectron2.utils.comm as comm
 from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.config import get_cfg
-from detectron2.data import MetadataCatalog, build_detection_train_loader
-from detectron2.engine import AutogradProfiler, DefaultTrainer, default_setup, launch
+from detectron2.data import build_detection_train_loader
+from detectron2.engine import DefaultTrainer, default_setup, launch
 from detectron2.evaluation import COCOEvaluator, verify_results
 from detectron2.solver.build import maybe_add_gradient_clipping
 
-from ReppointV1 import add_reppoint_config
+from RepPointV1Rewrite import add_reppoint_config
+import debug_dataset
+
 
 def my_argument_parser(epilog=None):
     """
@@ -98,8 +97,44 @@ Run on multiple machines:
 
     return parser
 
+from torch.nn.parallel import DataParallel, DistributedDataParallel
+from detectron2.utils.logger import setup_logger
+from detectron2.engine.train_loop import AMPTrainer, SimpleTrainer, TrainerBase
+
+import logging
 
 class Trainer(DefaultTrainer):
+    def __init__(self,cfg):
+        self._hooks = []
+        model = self.build_model(cfg)
+        optimizer = self.build_optimizer(cfg, model)
+        data_loader = self.build_train_loader(cfg)
+
+        # For training, wrap with DDP. But don't need this for inference.
+        if comm.get_world_size() > 1:
+            model = DistributedDataParallel(
+                model, device_ids=[comm.get_local_rank()], broadcast_buffers=False,
+                find_unused_parameters=True
+            )
+        self._trainer = (AMPTrainer if cfg.SOLVER.AMP.ENABLED else SimpleTrainer)(
+            model, data_loader, optimizer
+        )
+
+        self.scheduler = self.build_lr_scheduler(cfg, optimizer)
+        # Assume no other objects need to be checkpointed.
+        # We can later make it checkpoint the stateful hooks
+        self.checkpointer = DetectionCheckpointer(
+            # Assume you want to save checkpoints together with logs/statistics
+            model,
+            cfg.OUTPUT_DIR,
+            optimizer=optimizer,
+            scheduler=self.scheduler,
+        )
+        self.start_iter = 0
+        self.max_iter = cfg.SOLVER.MAX_ITER
+        self.cfg = cfg
+
+        self.register_hooks(self.build_hooks())
 
     @classmethod
     def build_evaluator(cls, cfg, dataset_name, output_folder=None):
@@ -150,10 +185,11 @@ class Trainer(DefaultTrainer):
                     self.count_step_num += 1
                     all_params = itertools.chain(*[x["params"] for x in self.param_groups])
                     nm = 0
-                    if not self.count_step_num%20:
-                        for p in list(filter(lambda p: p.grad is not None, all_params)):
-                            nm += p.grad.data.norm(2).item()**2
-                        print("gradient norm:{}".format(nm**0.5))
+                    #if not self.count_step_num%20:
+                        #for p in list(filter(lambda p: p.grad is not None, all_params)):
+                            #if p.device == 'cuda:0':
+                                #print(p.grad)
+                        #print("gradient norm:{}".format(nm**0.5))
                     torch.nn.utils.clip_grad_norm_(all_params, clip_norm_val)
                     super().step(closure=closure)
 
